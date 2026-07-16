@@ -177,7 +177,10 @@
       <button class="btn btn-accent" onclick="addPlayer()">Tambah</button>
     </div>
 
-    <span class="count-badge" id="countBadge">0 pemain</span>
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
+      <span class="count-badge" id="countBadge" style="margin-bottom:0;">0 pemain</span>
+      <button class="btn btn-ghost" type="button" onclick="resetAll()" style="padding:8px 14px; min-height:36px; font-size:12px;">Reset Semua</button>
+    </div>
 
     <ul class="players" id="playerList">
       <li class="empty" style="list-style:none;">Belum ada pemain ditambahkan.</li>
@@ -218,7 +221,50 @@
 </div>
 
 <script>
+  const SETUP_KEY = 'americano_setup_v1';
+  const TOURNEY_KEY = 'americano_tournament_v1';
+
   let players = [];
+
+  function saveSetup(){
+    const s = {
+      players,
+      courts: document.getElementById('courts').value,
+      gamesPerPlayer: document.getElementById('gamesPerPlayer').value,
+      points: document.getElementById('points').value,
+      tourneyName: document.getElementById('tourneyName').value
+    };
+    try{ localStorage.setItem(SETUP_KEY, JSON.stringify(s)); }
+    catch(e){ /* localStorage tidak tersedia (mis. mode private) — data tidak akan bertahan setelah refresh */ }
+  }
+
+  function loadSetup(){
+    let s;
+    try{ s = JSON.parse(localStorage.getItem(SETUP_KEY) || 'null'); }
+    catch(e){ s = null; }
+    if(!s) return;
+    if(Array.isArray(s.players)) players = s.players;
+    if(s.gamesPerPlayer != null) document.getElementById('gamesPerPlayer').value = s.gamesPerPlayer;
+    if(s.points != null) document.getElementById('points').value = s.points;
+    if(s.tourneyName != null) document.getElementById('tourneyName').value = s.tourneyName;
+  }
+
+  function resetAll(){
+    if(!confirm('Hapus semua pemain dan pengaturan yang tersimpan? Tindakan ini tidak bisa dibatalkan.')) return;
+    players = [];
+    document.getElementById('gamesPerPlayer').value = 3;
+    document.getElementById('points').value = 21;
+    document.getElementById('tourneyName').value = '';
+    try{
+      localStorage.removeItem(SETUP_KEY);
+      localStorage.removeItem(TOURNEY_KEY);
+    }catch(e){}
+    renderPlayers();
+  }
+
+  ['courts','gamesPerPlayer','points','tourneyName'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', saveSetup);
+  });
 
   function renderPlayers(){
     const list = document.getElementById('playerList');
@@ -247,6 +293,7 @@
     input.value = '';
     input.focus();
     renderPlayers();
+    saveSetup();
   }
 
   document.getElementById('playerInput').addEventListener('keydown', e=>{
@@ -256,6 +303,7 @@
   function removePlayer(i){
     players.splice(i,1);
     renderPlayers();
+    saveSetup();
   }
 
   function generateSchedule(){
@@ -283,6 +331,7 @@
     window.location.href = 'jadwal.html?data=' + encoded;
   }
 
+  loadSetup();
   renderPlayers();
 </script>
 </body>

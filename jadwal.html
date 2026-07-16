@@ -183,6 +183,8 @@
 </div>
 
 <script>
+const TOURNEY_KEY = 'americano_tournament_v1';
+
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -193,6 +195,39 @@ function getData(){
   if(!raw) return null;
   try{ return JSON.parse(decodeURIComponent(raw)); }
   catch(e){ return null; }
+}
+
+// Identifies a tournament by its actual setup, so a plain refresh (same URL/data)
+// reuses the saved schedule + scores instead of generating a new random one.
+function tournamentKey(data){
+  return JSON.stringify({
+    players: data.players, courts: data.courts,
+    gamesPerPlayer: data.gamesPerPlayer, points: data.points, name: data.name
+  });
+}
+
+function loadStoredTournament(data){
+  let stored;
+  try{ stored = JSON.parse(localStorage.getItem(TOURNEY_KEY) || 'null'); }
+  catch(e){ stored = null; }
+  if(stored && stored.key === tournamentKey(data)) return stored;
+  return null;
+}
+
+function saveTournament(data, schedule, scores){
+  try{
+    localStorage.setItem(TOURNEY_KEY, JSON.stringify({ key: tournamentKey(data), schedule, scores }));
+  }catch(e){ /* localStorage tidak tersedia — skor tidak akan bertahan setelah refresh */ }
+}
+
+function resetScores(){
+  if(!confirm('Hapus semua skor yang sudah diisi? Jadwal & pasangan tidak berubah.')) return;
+  const data = getData();
+  if(!data) return;
+  const stored = loadStoredTournament(data);
+  const schedule = stored ? stored.schedule : null;
+  if(schedule) saveTournament(data, schedule, {});
+  location.reload();
 }
 
 // Greedy Americano-style scheduler: keeps adding rounds until every player has played
@@ -299,8 +334,17 @@ function render(){
   }
 
   const { players, courts, gamesPerPlayer, points, name } = data;
-  const schedule = generateSchedule(players, courts, gamesPerPlayer);
-  const scores = {};
+
+  const stored = loadStoredTournament(data);
+  let schedule, scores;
+  if(stored && stored.schedule){
+    schedule = stored.schedule;
+    scores = stored.scores || {};
+  } else {
+    schedule = generateSchedule(players, courts, gamesPerPlayer);
+    scores = {};
+    saveTournament(data, schedule, scores);
+  }
 
   // check whether everyone actually reached the target (n * gamesPerPlayer might not divide evenly by 4)
   const gamesCount = players.map(()=>0);
@@ -315,6 +359,7 @@ function render(){
       <div class="eyebrow"><span class="dot"></span>Sedang Berlangsung</div>
       <div class="topbar-actions no-print">
         <a class="back" href="index.html">← Pengaturan</a>
+        <button class="btn-print" style="background:transparent; color:var(--text-mute); border:1px solid var(--line);" onclick="resetScores()">Reset Skor</button>
         <button class="btn-print" onclick="window.print()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
           Unduh PDF
@@ -344,7 +389,7 @@ function render(){
       </div>
 
       <div class="main">
-        ${schedule.map((round, ri)=> renderRound(round, ri, players)).join('')}
+        ${schedule.map((round, ri)=> renderRound(round, ri, players, scores)).join('')}
       </div>
     </div>
   `;
@@ -357,6 +402,7 @@ function render(){
       scores[k][side] = e.target.value;
       updateMatchVisual(ri, mi);
       updateLeaderboard();
+      saveTournament(data, schedule, scores);
     });
   });
 
@@ -401,9 +447,10 @@ function render(){
     }).join('');
   }
   updateLeaderboard();
+  schedule.forEach((round, ri)=> round.matches.forEach((m, mi)=> updateMatchVisual(ri, mi)));
 }
 
-function renderRound(round, ri, players){
+function renderRound(round, ri, players, scores){
   const byeText = round.byes.length
     ? `<span class="bye-tag">Istirahat: <b>${round.byes.map(i=>escapeHtml(players[i])).join(', ')}</b></span>`
     : '';
@@ -413,13 +460,15 @@ function renderRound(round, ri, players){
         <h3>Ronde ${ri+1}</h3>
         ${byeText}
       </div>
-      ${round.matches.map((m, mi)=> renderMatch(m, ri, mi, players)).join('')}
+      ${round.matches.map((m, mi)=> renderMatch(m, ri, mi, players, scores)).join('')}
     </div>
   `;
 }
 
-function renderMatch(m, ri, mi, players){
+function renderMatch(m, ri, mi, players, scores){
   const [A, B] = m;
+  const k = ri+'-'+mi;
+  const sc = (scores && scores[k]) || {a:'', b:''};
   return `
     <div class="match" data-round="${ri}" data-match="${mi}">
       <div class="court-label"><span>Lapangan ${mi+1}</span><span class="winmark"></span></div>
@@ -429,9 +478,9 @@ function renderMatch(m, ri, mi, players){
           <span class="p">${escapeHtml(players[A[1]])}</span>
         </div>
         <div class="score-wrap">
-          <input class="score-input" type="number" min="0" inputmode="numeric" data-key="${ri}-${mi}-a" placeholder="0">
+          <input class="score-input" type="number" min="0" inputmode="numeric" data-key="${ri}-${mi}-a" placeholder="0" value="${sc.a !== '' && sc.a != null ? escapeHtml(sc.a) : ''}">
           <span class="dash">–</span>
-          <input class="score-input" type="number" min="0" inputmode="numeric" data-key="${ri}-${mi}-b" placeholder="0">
+          <input class="score-input" type="number" min="0" inputmode="numeric" data-key="${ri}-${mi}-b" placeholder="0" value="${sc.b !== '' && sc.b != null ? escapeHtml(sc.b) : ''}">
         </div>
         <div class="team b" style="text-align:right;">
           <span class="p">${escapeHtml(players[B[0]])}</span>
