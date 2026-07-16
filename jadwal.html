@@ -195,26 +195,35 @@ function getData(){
   catch(e){ return null; }
 }
 
-// Greedy Americano-style scheduler: rotates partners, balances byes, avoids repeat pairings when possible.
-function generateSchedule(playerNames, courts, rounds){
+// Greedy Americano-style scheduler: keeps adding rounds until every player has played
+// `gamesPerPlayer` games, rotating partners/opponents and balancing who plays each round.
+function generateSchedule(playerNames, courts, gamesPerPlayer){
   const n = playerNames.length;
   const activePerRound = courts * 4;
-  const byesPerRound = n - activePerRound;
 
   const partnerCount = {};
   const oppCount = {};
-  const byeCountArr = new Array(n).fill(0);
+  const gamesPlayedArr = new Array(n).fill(0);
   const key = (a,b) => a < b ? a+','+b : b+','+a;
   const getPC = (a,b) => partnerCount[key(a,b)] || 0;
   const getOC = (a,b) => oppCount[key(a,b)] || 0;
 
   const scheduleRounds = [];
+  let guard = 0;
 
-  for(let r=0; r<rounds; r++){
-    let order = playerNames.map((p,i)=>i).sort((a,b)=> (byeCountArr[a]-byeCountArr[b]) || (Math.random()-0.5));
-    let byes = order.slice(0, byesPerRound);
-    let active = order.slice(byesPerRound);
-    byes.forEach(i=>byeCountArr[i]++);
+  while(gamesPlayedArr.some(g => g < gamesPerPlayer) && guard < 500){
+    guard++;
+
+    // players who still need games, prioritizing those who have played the fewest so far
+    let candidates = playerNames.map((p,i)=>i).filter(i => gamesPlayedArr[i] < gamesPerPlayer);
+    candidates.sort((a,b) => (gamesPlayedArr[a]-gamesPlayedArr[b]) || (Math.random()-0.5));
+
+    const maxActive = Math.min(activePerRound, Math.floor(candidates.length/4)*4);
+    if(maxActive < 4) break; // not enough players left needing a game to fill a court
+
+    let active = candidates.slice(0, maxActive);
+    const activeSet = new Set(active);
+    let byes = playerNames.map((p,i)=>i).filter(i => !activeSet.has(i));
 
     let pool = [...active];
     for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
@@ -247,6 +256,7 @@ function generateSchedule(playerNames, courts, rounds){
       [A[0],A[1]].forEach(x=>[B[0],B[1]].forEach(y=>{ oppCount[key(x,y)] = getOC(x,y) + 1; }));
     }
 
+    active.forEach(i => gamesPlayedArr[i]++);
     scheduleRounds.push({ matches, byes });
   }
   return scheduleRounds;
@@ -288,9 +298,17 @@ function render(){
     return;
   }
 
-  const { players, courts, rounds, points, name } = data;
-  const schedule = generateSchedule(players, courts, rounds);
+  const { players, courts, gamesPerPlayer, points, name } = data;
+  const schedule = generateSchedule(players, courts, gamesPerPlayer);
   const scores = {};
+
+  // check whether everyone actually reached the target (n * gamesPerPlayer might not divide evenly by 4)
+  const gamesCount = players.map(()=>0);
+  schedule.forEach(round => round.matches.forEach(([A,B]) => [...A,...B].forEach(p => gamesCount[p]++)));
+  const shortfall = players.filter((p,i)=>gamesCount[i] < gamesPerPlayer);
+  const shortfallNote = shortfall.length
+    ? `<p class="meta" style="color:var(--accent-2);">⚠ ${shortfall.map(escapeHtml).join(', ')} main ${gamesPerPlayer-1}x (satu kali lebih sedikit) karena total pemain × main per orang tidak habis dibagi 4.</p>`
+    : '';
 
   app.innerHTML = `
     <div class="topbar">
@@ -304,7 +322,8 @@ function render(){
       </div>
     </div>
     <h1>${escapeHtml(name)}</h1>
-    <p class="meta"><b>${players.length}</b> pemain &nbsp;·&nbsp; <b>${courts}</b> lapangan &nbsp;·&nbsp; <b>${rounds}</b> ronde &nbsp;·&nbsp; target <b>${points}</b> poin/game</p>
+    <p class="meta"><b>${players.length}</b> pemain &nbsp;·&nbsp; <b>${courts}</b> lapangan &nbsp;·&nbsp; <b>${schedule.length}</b> ronde &nbsp;·&nbsp; main <b>${gamesPerPlayer}x</b> per orang &nbsp;·&nbsp; target <b>${points}</b> poin/game</p>
+    ${shortfallNote}
 
     <div class="layout">
       <div class="sidebar">
