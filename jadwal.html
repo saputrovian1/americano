@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+<meta name="theme-color" content="#0e1f1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Americano">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Americano Bulu Tangkis — Jadwal &amp; Skor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0e1f1a;
+    --bg-card: #142e26;
+    --bg-card-2: #0f241d;
+    --line: #2a4a3f;
+    --accent: #d7ff4f;
+    --accent-dim: #a7c93c;
+    --accent-2: #ff6b4a;
+    --text: #eef5ec;
+    --text-mute: #90a89c;
+    --radius: 14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: radial-gradient(1200px 600px at 80% -10%, #16352b 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 26px 16px calc(70px + env(safe-area-inset-bottom));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    touch-action: manipulation;
+  }
+  .wrap{ max-width: 1040px; margin: 0 auto; }
+
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom: 22px; gap: 10px; flex-wrap: wrap; }
+  .eyebrow{
+    display:flex; align-items:center; gap:10px;
+    font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--accent); font-weight:600;
+  }
+  .eyebrow .dot{ width:6px; height:6px; border-radius:50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+  .back{ color: var(--text-mute); font-size: 13px; text-decoration:none; border:1px solid var(--line); border-radius:999px; padding: 9px 16px; min-height: 40px; display:inline-flex; align-items:center; }
+  .back:hover{ color: var(--text); border-color: var(--accent-dim); }
+  .topbar-actions{ display:flex; gap:8px; }
+  .btn-print{
+    display:inline-flex; align-items:center; gap:6px;
+    background: var(--accent); color: #0e1f1a; font-weight:700; font-size: 13px;
+    border:none; border-radius:999px; padding: 9px 16px; min-height: 40px; cursor:pointer;
+  }
+  .btn-print:hover{ filter: brightness(1.08); }
+  .btn-print svg{ width:14px; height:14px; }
+
+  .crown{ display:inline-block; width:15px; height:15px; vertical-align:-2px; margin-right:3px; color: var(--accent); }
+
+  h1{
+    font-family:'Archivo Black', 'Inter', sans-serif;
+    font-size: clamp(26px, 6vw, 36px);
+    line-height: 1.02;
+    margin: 0 0 6px;
+  }
+  .meta{ color: var(--text-mute); font-size: 13px; margin: 0 0 24px; }
+  .meta b{ color: var(--text); }
+
+  .layout{ display:grid; grid-template-columns: 300px 1fr; gap: 20px; align-items:start; }
+  @media (max-width: 780px){
+    .layout{ grid-template-columns: 1fr; }
+    .sidebar{ position: static !important; order: -1; }
+  }
+  .sidebar{ position: sticky; top: 20px; }
+
+  .round-card{
+    background: linear-gradient(180deg, var(--bg-card), var(--bg-card-2));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .round-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 6px; }
+  .round-head h3{
+    font-family:'Archivo Black'; font-size: 13px; letter-spacing:.06em; text-transform:uppercase;
+    margin:0; color: var(--accent-dim);
+  }
+  .bye-tag{ font-size: 12px; color: var(--text-mute); }
+  .bye-tag b{ color: var(--accent-2); font-weight:600; }
+
+  .match{
+    border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 10px;
+    background: #0b1a15;
+    transition: border-color .15s;
+  }
+  .match.done{ border-color: var(--accent-dim); }
+  .match:last-child{ margin-bottom:0; }
+  .match .court-label{ font-size: 11px; color: var(--text-mute); text-transform:uppercase; letter-spacing:.05em; margin-bottom: 10px; display:flex; justify-content:space-between; }
+  .match .court-label .winmark{ color: var(--accent); font-weight:700; }
+  .match-row{ display:grid; grid-template-columns: 1fr auto 1fr; align-items:center; gap: 10px; }
+  .team{ font-size: 14px; line-height:1.4; }
+  .team .p{ display:block; }
+  .team.winner .p{ color: var(--accent); font-weight:600; }
+  .score-input{
+    width: 60px; min-height: 44px; text-align:center; background: #0e241c; border: 1px solid var(--line);
+    color: var(--text); border-radius: 8px; padding: 8px 4px; font-size: 16px; font-weight:700;
+    font-family:'Inter'; outline:none;
+  }
+  .score-input:focus{ border-color: var(--accent); }
+  .score-wrap{ display:flex; align-items:center; gap:6px; justify-content:center; }
+  .dash{ color: var(--text-mute); }
+
+  .leaderboard{
+    background: linear-gradient(180deg, var(--bg-card), var(--bg-card-2));
+    border: 1px solid var(--line); border-radius: var(--radius); padding: 18px;
+  }
+  .leaderboard h2{
+    font-family:'Archivo Black'; font-size: 13px; letter-spacing:.06em; text-transform:uppercase;
+    margin: 0 0 4px; color: var(--accent-dim);
+  }
+  .leaderboard .lbhint{ color: var(--text-mute); font-size: 12px; margin: 0 0 14px; }
+  table{ width:100%; border-collapse: collapse; }
+  th{
+    text-align:left; font-size: 10.5px; text-transform:uppercase; letter-spacing:.04em;
+    color: var(--text-mute); padding: 6px 4px; border-bottom: 1px solid var(--line);
+  }
+  th.num, td.num{ text-align:right; }
+  td{ padding: 9px 4px; font-size: 13px; border-bottom: 1px solid rgba(42,74,63,0.5); }
+  tr:last-child td{ border-bottom:none; }
+  .rank{ font-family:'Archivo Black'; color: var(--accent-dim); font-size:11px; width: 22px; }
+  .rank.gold{ color: var(--accent); }
+  .pts{ font-family:'Archivo Black'; color: var(--accent); }
+  .net-pos{ color: var(--accent); }
+  .net-neg{ color: var(--accent-2); }
+  .pname{ max-width: 110px; overflow:hidden; text-overflow: ellipsis; white-space:nowrap; }
+
+  .empty-state{ text-align:center; color: var(--text-mute); padding: 60px 20px; }
+  .empty-state a{ color: var(--accent); }
+
+  @media print{
+    .no-print{ display:none !important; }
+    body{
+      background: #fff !important; color: #111 !important; padding: 0 !important;
+    }
+    .wrap{ max-width: 100%; }
+    h1{ color:#111; }
+    .eyebrow{ color:#3a6b3a; }
+    .meta{ color:#444; }
+    .meta b{ color:#111; }
+    .layout{ display:block !important; }
+    .sidebar{ position: static !important; margin-bottom: 18px; }
+    .round-card, .leaderboard{
+      background: #fff !important; border: 1px solid #ccc !important;
+      break-inside: avoid; page-break-inside: avoid; box-shadow:none !important;
+    }
+    .round-head h3{ color:#2f4a2f; }
+    .match{ background:#fafafa !important; border:1px solid #ddd !important; break-inside: avoid; }
+    .team .p{ color:#111; }
+    .team.winner .p{ color:#2f7d32 !important; font-weight:700; }
+    .score-input{
+      border:none !important; background:transparent !important; color:#111 !important;
+      -webkit-appearance:none;
+    }
+    .dash{ color:#888; }
+    th{ color:#555; border-color:#ccc; }
+    td{ color:#111; border-color:#e0e0e0; }
+    .pts{ color:#111 !important; }
+    .net-pos{ color:#2f7d32 !important; }
+    .net-neg{ color:#b33 !important; }
+    .rank.gold{ color:#b8860b !important; }
+    .crown{ color:#b8860b !important; }
+    a{ color:#111; text-decoration:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <!-- content injected by script -->
+</div>
+
+<script>
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function getData(){
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get('data');
+  if(!raw) return null;
+  try{ return JSON.parse(decodeURIComponent(raw)); }
+  catch(e){ return null; }
+}
+
+// Greedy Americano-style scheduler: rotates partners, balances byes, avoids repeat pairings when possible.
+function generateSchedule(playerNames, courts, rounds){
+  const n = playerNames.length;
+  const activePerRound = courts * 4;
+  const byesPerRound = n - activePerRound;
+
+  const partnerCount = {};
+  const oppCount = {};
+  const byeCountArr = new Array(n).fill(0);
+  const key = (a,b) => a < b ? a+','+b : b+','+a;
+  const getPC = (a,b) => partnerCount[key(a,b)] || 0;
+  const getOC = (a,b) => oppCount[key(a,b)] || 0;
+
+  const scheduleRounds = [];
+
+  for(let r=0; r<rounds; r++){
+    let order = playerNames.map((p,i)=>i).sort((a,b)=> (byeCountArr[a]-byeCountArr[b]) || (Math.random()-0.5));
+    let byes = order.slice(0, byesPerRound);
+    let active = order.slice(byesPerRound);
+    byes.forEach(i=>byeCountArr[i]++);
+
+    let pool = [...active];
+    for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+
+    let partnerships = [];
+    while(pool.length > 0){
+      let a = pool.shift();
+      let bestIdx = 0, bestScore = Infinity;
+      for(let idx=0; idx<pool.length; idx++){
+        const score = getPC(a, pool[idx]);
+        if(score < bestScore){ bestScore = score; bestIdx = idx; }
+      }
+      let b = pool.splice(bestIdx,1)[0];
+      partnerships.push([a,b]);
+      partnerCount[key(a,b)] = getPC(a,b) + 1;
+    }
+
+    let pPool = [...partnerships];
+    let matches = [];
+    while(pPool.length > 0){
+      let A = pPool.shift();
+      let bestIdx = 0, bestScore = Infinity;
+      for(let idx=0; idx<pPool.length; idx++){
+        const B = pPool[idx];
+        const score = getOC(A[0],B[0]) + getOC(A[0],B[1]) + getOC(A[1],B[0]) + getOC(A[1],B[1]);
+        if(score < bestScore){ bestScore = score; bestIdx = idx; }
+      }
+      let B = pPool.splice(bestIdx,1)[0];
+      matches.push([A,B]);
+      [A[0],A[1]].forEach(x=>[B[0],B[1]].forEach(y=>{ oppCount[key(x,y)] = getOC(x,y) + 1; }));
+    }
+
+    scheduleRounds.push({ matches, byes });
+  }
+  return scheduleRounds;
+}
+
+// Recap: wins, losses, net points (selisih poin), total points — computed from entered scores only.
+function buildLeaderboard(playerNames, schedule, scores){
+  const totals = playerNames.map(()=>({points:0, games:0, wins:0, losses:0, net:0}));
+  schedule.forEach((round, ri)=>{
+    round.matches.forEach((m, mi)=>{
+      const k = ri+'-'+mi;
+      const sc = scores[k];
+      if(!sc || sc.a === '' || sc.b === '' || sc.a == null || sc.b == null) return;
+      const a = parseInt(sc.a), b = parseInt(sc.b);
+      if(isNaN(a) || isNaN(b)) return;
+      const [A, B] = m;
+      A.forEach(p=>{
+        totals[p].points += a; totals[p].games += 1; totals[p].net += (a-b);
+        if(a>b) totals[p].wins += 1; else if(a<b) totals[p].losses += 1;
+      });
+      B.forEach(p=>{
+        totals[p].points += b; totals[p].games += 1; totals[p].net += (b-a);
+        if(b>a) totals[p].wins += 1; else if(b<a) totals[p].losses += 1;
+      });
+    });
+  });
+  return playerNames.map((name,i)=>({ name, ...totals[i] }))
+    .sort((x,y)=> y.wins - x.wins || y.net - x.net || y.points - x.points);
+}
+
+function render(){
+  const data = getData();
+  const app = document.getElementById('app');
+  if(!data || !data.players || data.players.length < 4){
+    app.innerHTML = `<div class="empty-state">
+      <p>Belum ada data turnamen yang valid.</p>
+      <p><a href="index.html">← Kembali ke halaman pengaturan</a></p>
+    </div>`;
+    return;
+  }
+
+  const { players, courts, rounds, points, name } = data;
+  const schedule = generateSchedule(players, courts, rounds);
+  const scores = {};
+
+  app.innerHTML = `
+    <div class="topbar">
+      <div class="eyebrow"><span class="dot"></span>Sedang Berlangsung</div>
+      <div class="topbar-actions no-print">
+        <a class="back" href="index.html">← Pengaturan</a>
+        <button class="btn-print" onclick="window.print()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
+          Unduh PDF
+        </button>
+      </div>
+    </div>
+    <h1>${escapeHtml(name)}</h1>
+    <p class="meta"><b>${players.length}</b> pemain &nbsp;·&nbsp; <b>${courts}</b> lapangan &nbsp;·&nbsp; <b>${rounds}</b> ronde &nbsp;·&nbsp; target <b>${points}</b> poin/game</p>
+
+    <div class="layout">
+      <div class="sidebar">
+        <div class="leaderboard">
+          <h2>Rekap Klasemen</h2>
+          <p class="lbhint">Menang–Kalah &amp; selisih poin, terupdate langsung.</p>
+          <table>
+            <thead>
+              <tr>
+                <th></th><th>Pemain</th>
+                <th class="num">M</th><th class="num">K</th>
+                <th class="num">Selisih</th><th class="num">Poin</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboardBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="main">
+        ${schedule.map((round, ri)=> renderRound(round, ri, players)).join('')}
+      </div>
+    </div>
+  `;
+
+  document.querySelectorAll('.score-input').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const [ri, mi, side] = e.target.dataset.key.split('-');
+      const k = ri+'-'+mi;
+      if(!scores[k]) scores[k] = {a:'', b:''};
+      scores[k][side] = e.target.value;
+      updateMatchVisual(ri, mi);
+      updateLeaderboard();
+    });
+  });
+
+  function updateMatchVisual(ri, mi){
+    const k = ri+'-'+mi;
+    const sc = scores[k];
+    const matchEl = document.querySelector(`.match[data-round="${ri}"][data-match="${mi}"]`);
+    if(!matchEl) return;
+    const teamA = matchEl.querySelector('.team.a');
+    const teamB = matchEl.querySelector('.team.b');
+    const winmark = matchEl.querySelector('.winmark');
+    teamA.classList.remove('winner'); teamB.classList.remove('winner');
+    matchEl.classList.remove('done');
+    winmark.textContent = '';
+    if(sc && sc.a !== '' && sc.b !== '' && sc.a != null && sc.b != null){
+      const a = parseInt(sc.a), b = parseInt(sc.b);
+      if(!isNaN(a) && !isNaN(b)){
+        matchEl.classList.add('done');
+        if(a > b){ teamA.classList.add('winner'); winmark.textContent = 'Selisih ' + (a-b); }
+        else if(b > a){ teamB.classList.add('winner'); winmark.textContent = 'Selisih ' + (b-a); }
+        else { winmark.textContent = 'Seri'; }
+      }
+    }
+  }
+
+  const CROWN_SVG = '<svg class="crown" viewBox="0 0 24 24" fill="currentColor"><path d="M4 18l-1.6-9.2a.6.6 0 0 1 .95-.58L8 11l3.2-6a.9.9 0 0 1 1.6 0L16 11l4.65-2.8a.6.6 0 0 1 .95.58L20 18H4z"/><rect x="4" y="18" width="16" height="2.4" rx="0.6"/></svg>';
+
+  function updateLeaderboard(){
+    const rows = buildLeaderboard(players, schedule, scores);
+    document.getElementById('leaderboardBody').innerHTML = rows.map((row,i)=>{
+      const isLeader = i===0 && row.games>0;
+      return `
+      <tr>
+        <td class="rank ${isLeader?'gold':''}">${isLeader ? CROWN_SVG : String(i+1).padStart(2,'0')}</td>
+        <td class="pname" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</td>
+        <td class="num">${row.wins}</td>
+        <td class="num">${row.losses}</td>
+        <td class="num ${row.net>0?'net-pos':row.net<0?'net-neg':''}">${row.net>0?'+':''}${row.net}</td>
+        <td class="num pts">${row.points}</td>
+      </tr>
+    `;
+    }).join('');
+  }
+  updateLeaderboard();
+}
+
+function renderRound(round, ri, players){
+  const byeText = round.byes.length
+    ? `<span class="bye-tag">Istirahat: <b>${round.byes.map(i=>escapeHtml(players[i])).join(', ')}</b></span>`
+    : '';
+  return `
+    <div class="round-card">
+      <div class="round-head">
+        <h3>Ronde ${ri+1}</h3>
+        ${byeText}
+      </div>
+      ${round.matches.map((m, mi)=> renderMatch(m, ri, mi, players)).join('')}
+    </div>
+  `;
+}
+
+function renderMatch(m, ri, mi, players){
+  const [A, B] = m;
+  return `
+    <div class="match" data-round="${ri}" data-match="${mi}">
+      <div class="court-label"><span>Lapangan ${mi+1}</span><span class="winmark"></span></div>
+      <div class="match-row">
+        <div class="team a">
+          <span class="p">${escapeHtml(players[A[0]])}</span>
+          <span class="p">${escapeHtml(players[A[1]])}</span>
+        </div>
+        <div class="score-wrap">
+          <input class="score-input" type="number" min="0" inputmode="numeric" data-key="${ri}-${mi}-a" placeholder="0">
+          <span class="dash">–</span>
+          <input class="score-input" type="number" min="0" inputmode="numeric" data-key="${ri}-${mi}-b" placeholder="0">
+        </div>
+        <div class="team b" style="text-align:right;">
+          <span class="p">${escapeHtml(players[B[0]])}</span>
+          <span class="p">${escapeHtml(players[B[1]])}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+render();
+</script>
+</body>
+</html>
